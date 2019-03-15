@@ -1,11 +1,15 @@
 package com.example.leona.appproyecto
 
+import android.content.Intent
 import android.os.AsyncTask
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import com.example.leona.appproyecto.database.AppDatabase
+import com.example.leona.appproyecto.database.VisitasEntry
+import com.example.leona.appproyecto.helper.doAsync
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONException
 import org.json.JSONObject
@@ -13,6 +17,7 @@ import java.io.*
 import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.URL
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
     //val mcrypt = MCrypt()
@@ -46,7 +51,7 @@ class MainActivity : AppCompatActivity() {
                 val printout: DataOutputStream
                 val input: DataInputStream
                 //modificar la dirrecion ip de acuerdo ala red
-                url = URL("http://172.31.66.116/proyecto/RegEmpleado.php")
+                url = URL("http://172.31.66.119/proyecto/RegEmpleado.php")
 
                 //  Abrimos la conexión hacia el servicio web alojado en el servidor
                 urlConn = url.openConnection() as HttpURLConnection
@@ -116,16 +121,20 @@ class MainActivity : AppCompatActivity() {
 
         override fun onPostExecute(s: String?) {
             super.onPostExecute(s)
-            var cla :  String = "";
-            var nom: String="";
-            var apell: String= "";
-            var edad: String = "";
-            var dir : String = "";
-            var nomre : String = "";
-            var monayu : String = "";
+            var cla :  String
+            var nom: String
+            var apell: String
+            var edad: String
+            var dir : String
+            var nomre : String
+            var monayu : String
             val devuelve = ""
             var suc: String
             var msg: String
+
+            //mandamos ala siguiente actividad
+            val inte=Intent(this@MainActivity,Opciones::class.java)
+
             Log.d("Barcenas",s)
             try {
                 val respuestaJSON = JSONObject(s.toString())
@@ -143,13 +152,7 @@ class MainActivity : AppCompatActivity() {
                         // Recorrer el arreglo de avisos y insertarlo en sqlite
                         if (visitasJSON.length() >= 1) {
                             for (i in 0 until visitasJSON.length()) {
-                                //cla= desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("clave"))))
-                                //nom = desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("nombre"))))
-                                //apell= desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("apellido"))))
-                                //edad = desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("edad"))))
-                                //dir = desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("direccion"))))
-                                //nomre = desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("nomresponsable"))))
-                                //monayu= desencripta(String(mcrypt.decrypt(visitasJSON.getJSONObject(i).getString("montoayuda"))))
+
                                 cla=(visitasJSON.getJSONObject(i).getString("clave"))
                                 nom=(visitasJSON.getJSONObject(i).getString("nombre"))
                                 apell=(visitasJSON.getJSONObject(i).getString("apellido"))
@@ -158,11 +161,25 @@ class MainActivity : AppCompatActivity() {
                                 nomre=(visitasJSON.getJSONObject(i).getString("nomresponsable"))
                                 monayu=(visitasJSON.getJSONObject(i).getString("montoayuda"))
                                 Log.d("Barcenas",nom) //<------------Insert
+
+                               val visi= VisitasEntry(clave =cla.toLong(),nombre = nom,apellido = apell,edad = edad.toLong(),direccion = dir,nomrespo = nomre,montayu = monayu.toFloat(),Actualizado_En = Date())
+
+                                doAsync{
+                                    AppDatabase.getInstance(this@MainActivity)!!.visitasDao().insertVisitas(visi)
+
+                                    }.execute()
+
                             }
                         } else {
                             Toast.makeText(baseContext,"No hay visitas", Toast.LENGTH_LONG).show()
                         }
                         Toast.makeText(baseContext,"Success 200: " + msgJSON, Toast.LENGTH_LONG).show()
+
+                            intent.putExtra("Nombre",nomEmpleado)
+                            //Inicializamos la siguiente Actividad
+                                startActivity(inte)
+
+
                     }
                     "422"  // Falta Información en el web service
                     -> {
